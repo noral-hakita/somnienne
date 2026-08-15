@@ -1,37 +1,9 @@
 import ProductCard from '@/components/ProductCard'
+import { getProducts } from '@/lib/api/products'
 
-const mockProducts = [
-  {
-    id: "1",
-    name: "The Silk Cloud",
-    price: 14500,
-    imageGradient: "from-ivory to-sand",
-    shortDescription: "Weightless mulberry silk in our signature ivory."
-  },
-  {
-    id: "2",
-    name: "The Linen Dream",
-    price: 12000,
-    imageGradient: "from-sand to-linen",
-    shortDescription: "Breathable French linen, washed for softness."
-  },
-  {
-    id: "3",
-    name: "The Midnight Cocoon",
-    price: 18500,
-    imageGradient: "from-espresso to-taupe",
-    shortDescription: "Heavyweight cashmere blend for quiet winter nights."
-  },
-  {
-    id: "4",
-    name: "The Bronze Slip",
-    price: 9500,
-    imageGradient: "from-bronze to-sand",
-    shortDescription: "A delicate bias-cut slip with bronze undertones."
-  }
-]
+export default async function CollectionPage() {
+  const products = await getProducts()
 
-export default function CollectionPage() {
   return (
     <div className="max-w-7xl mx-auto px-6 pt-32 pb-24">
       <div className="flex flex-col items-center text-center mb-16">
@@ -47,7 +19,7 @@ export default function CollectionPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        {mockProducts.map((product) => (
+        {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
