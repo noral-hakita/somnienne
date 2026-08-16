@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from 'next/navigation'
 
 export default function Loader() {
+  const pathname = usePathname()
   const [pct, setPct] = useState(0);
   const [done, setDone] = useState(false);
 
@@ -18,18 +20,14 @@ export default function Loader() {
       
       if (val >= 100) {
         clearInterval(interval);
-        setTimeout(() => setDone(true), 500); // Pause at 100%
+        setTimeout(() => setDone(true), 500);
       }
     }, 50);
 
     return () => clearInterval(interval);
   }, []);
 
-  const getThemeText = () => {
-    if (pct < 33) return "Threading the needle";
-    if (pct < 66) return "Pressing the linen";
-    return "Tucking you in";
-  };
+  if (pathname.startsWith('/admin')) return null;
 
   return (
     <AnimatePresence>
@@ -39,24 +37,12 @@ export default function Loader() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8 }}
         >
-          {/* The giant percentage counter */}
-          <motion.h1 
-            className="text-[8rem] md:text-[12rem] leading-none font-light tracking-tighter text-espresso/5"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <motion.h1 className="text-[8rem] md:text-[12rem] leading-none font-light tracking-tighter text-espresso/5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {pct}<span className="text-bronze">%</span>
           </motion.h1>
-
-          {/* The progress bar */}
           <div className="w-64 h-[1px] bg-sand relative overflow-hidden">
-            <motion.div
-              className="absolute inset-y-0 left-0 bg-bronze"
-              style={{ width: `${pct}%` }}
-            />
+            <motion.div className="absolute inset-y-0 left-0 bg-bronze" style={{ width: `${pct}%` }} />
           </div>
-
-          {/* The clothing-themed text */}
           <motion.p 
             className="text-[10px] uppercase tracking-[0.4em] text-taupe"
             key={getThemeText()}
@@ -70,4 +56,10 @@ export default function Loader() {
       )}
     </AnimatePresence>
   );
+
+  function getThemeText() {
+    if (pct < 33) return "Threading the needle";
+    if (pct < 66) return "Pressing the linen";
+    return "Tucking you in";
+  }
 }
