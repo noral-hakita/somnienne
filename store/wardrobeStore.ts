@@ -2,19 +2,24 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export interface WardrobeItem {
-  id: string           // The product ID
-  variantId?: string   // For sizes/colors later
+  id: string            // product id
+  variantId?: string    // the exact size/color row
   name: string
   price: number
   image: string
+  attributes?: string   // "S · Ivory" or "Custom size"
+  customNotes?: string
   quantity: number
 }
+
+export const wardrobeLineKey = (item: Pick<WardrobeItem, 'id' | 'variantId'>) =>
+  item.variantId ?? item.id
 
 interface WardrobeState {
   items: WardrobeItem[]
   addItem: (item: Omit<WardrobeItem, 'quantity'>) => void
-  removeItem: (id: string) => void
-  updateQuantity: (id: string, quantity: number) => void
+  removeItem: (key: string) => void
+  updateQuantity: (key: string, quantity: number) => void
   clearWardrobe: () => void
   getItemCount: () => number
   getSubtotal: () => number
@@ -25,33 +30,34 @@ export const useWardrobeStore = create<WardrobeState>()(
     (set, get) => ({
       items: [],
       addItem: (newItem) => {
-        const existing = get().items.find((item) => item.id === newItem.id)
+        const key = wardrobeLineKey(newItem)
+        const existing = get().items.find((i) => wardrobeLineKey(i) === key)
         if (existing) {
           set({
-            items: get().items.map((item) =>
-              item.id === newItem.id ? { ...item, quantity: item.quantity + 1 } : item
+            items: get().items.map((i) =>
+              wardrobeLineKey(i) === key ? { ...i, quantity: i.quantity + 1 } : i
             ),
           })
         } else {
           set({ items: [...get().items, { ...newItem, quantity: 1 }] })
         }
       },
-      removeItem: (id) => set({ items: get().items.filter((item) => item.id !== id) }),
-      updateQuantity: (id, quantity) => {
+      removeItem: (key) => set({ items: get().items.filter((i) => wardrobeLineKey(i) !== key) }),
+      updateQuantity: (key, quantity) => {
         if (quantity <= 0) {
-          get().removeItem(id)
+          get().removeItem(key)
         } else {
           set({
-            items: get().items.map((item) => (item.id === id ? { ...item, quantity } : item)),
+            items: get().items.map((i) =>
+              wardrobeLineKey(i) === key ? { ...i, quantity } : i
+            ),
           })
         }
       },
       clearWardrobe: () => set({ items: [] }),
-      getItemCount: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
-      getSubtotal: () => get().items.reduce((acc, item) => acc + item.price * item.quantity, 0),
+      getItemCount: () => get().items.reduce((acc, i) => acc + i.quantity, 0),
+      getSubtotal: () => get().items.reduce((acc, i) => acc + i.price * i.quantity, 0),
     }),
-    {
-      name: 'somnienne-wardrobe', // This is the key in localStorage
-    }
+    { name: 'somnienne-wardrobe' }
   )
 )

@@ -1,12 +1,12 @@
-import ProductCard from '@/components/ProductCard'
-import { getProducts } from '@/lib/api/products'
+import CollectionClient from '@/components/CollectionClient'
+import { getProducts, getCategories } from '@/lib/api/products'
 
 export default async function CollectionPage() {
-  const products = await getProducts()
+  const [products, categories] = await Promise.all([getProducts(), getCategories()])
 
   return (
     <div className="max-w-7xl mx-auto px-6 pt-32 pb-24">
-      <div className="flex flex-col items-center text-center mb-16">
+      <div className="flex flex-col items-center text-center mb-12">
         <p className="text-bronze text-[10px] md:text-xs uppercase tracking-[0.4em] mb-4">
           The Collection
         </p>
@@ -18,11 +18,7 @@ export default async function CollectionPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      <CollectionClient products={products} categories={categories} />
     </div>
   )
 }

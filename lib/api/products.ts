@@ -1,33 +1,72 @@
 import { createClient } from '@/lib/supabase/server'
 
+export interface StoreVariant {
+  id: string
+  sku: string
+  size: string
+  color: string
+  stock: number
+  isCustom: boolean
+}
+
+export interface StoreCategory {
+  id: string
+  name: string
+  slug: string
+}
+
 export interface StoreProduct {
   id: string
   name: string
+  slug: string
   price: number
   imageGradient: string
   shortDescription: string
   fullDescription: string
-  slug: string
+  categoryName: string | null
+  customLeadTimeDays: number
+  variants: StoreVariant[]
+}
+
+const mapVariants = (rows: any[]): StoreVariant[] =>
+  (rows ?? []).map((v) => ({
+    id: v.id,
+    sku: v.sku,
+    size: v.attributes?.size ?? 'One Size',
+    color: v.attributes?.color ?? 'Default',
+    stock: v.stock,
+    isCustom: v.is_custom,
+  }))
+
+export async function getCategories(): Promise<StoreCategory[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('categories').select('id, name, slug')
+    .eq('is_active', true).order('sort_order')
+  return data ?? []
 }
 
 export async function getProducts(): Promise<StoreProduct[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, slug, retail_price, sale_price, short_description, full_description, product_variants(image_url)')
+    .select('id, name, slug, retail_price, sale_price, short_description, full_description, custom_lead_time_days, categories(name), product_variants(id, sku, attributes, stock, is_custom, image_url)')
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
   if (error || !data) return []
 
-  return data.map((p) => ({
+  return (data as any[]).map((p) => ({
     id: p.id,
     name: p.name,
     slug: p.slug,
     price: Number(p.sale_price ?? p.retail_price),
-    imageGradient: p.product_variants[0]?.image_url ?? 'from-ivory to-sand',
+    imageGradient: p.product_variants?.[0]?.image_url ?? 'from-ivory to-sand',
     shortDescription: p.short_description ?? '',
     fullDescription: p.full_description ?? '',
+    categoryName: p.categories?.name ?? null,
+    customLeadTimeDays: p.custom_lead_time_days ?? 7,
+    variants: mapVariants(p.product_variants),
   }))
 }
 
@@ -35,20 +74,24 @@ export async function getProductById(id: string): Promise<StoreProduct | undefin
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, slug, retail_price, sale_price, short_description, full_description, product_variants(image_url)')
+    .select('id, name, slug, retail_price, sale_price, short_description, full_description, custom_lead_time_days, categories(name), product_variants(id, sku, attributes, stock, is_custom, image_url)')
     .eq('id', id)
     .eq('is_active', true)
     .single()
 
   if (error || !data) return undefined
+  const p = data as any
 
   return {
-    id: data.id,
-    name: data.name,
-    slug: data.slug,
-    price: Number(data.sale_price ?? data.retail_price),
-    imageGradient: data.product_variants[0]?.image_url ?? 'from-ivory to-sand',
-    shortDescription: data.short_description ?? '',
-    fullDescription: data.full_description ?? '',
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    price: Number(p.sale_price ?? p.retail_price),
+    imageGradient: p.product_variants?.[0]?.image_url ?? 'from-ivory to-sand',
+    shortDescription: p.short_description ?? '',
+    fullDescription: p.full_description ?? '',
+    categoryName: p.categories?.name ?? null,
+    customLeadTimeDays: p.custom_lead_time_days ?? 7,
+    variants: mapVariants(p.product_variants),
   }
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useWardrobeStore } from '@/store/wardrobeStore'
+import { useWardrobeStore, wardrobeLineKey } from '@/store/wardrobeStore'
 import { Minus, Plus, X } from 'lucide-react'
 
 export default function WardrobePage() {
@@ -38,65 +38,66 @@ export default function WardrobePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Items List */}
         <div className="lg:col-span-2 divide-y divide-sand">
-          {items.map((item) => (
-            <div key={item.id} className="py-8 flex gap-6">
-              {/* Image Placeholder */}
-              <Link href={`/product/${item.id}`} className="w-24 h-32 md:w-32 md:h-40 bg-linen flex-shrink-0 overflow-hidden">
-                <div className={`w-full h-full bg-gradient-to-br ${item.image || 'from-ivory to-sand'}`} />
-              </Link>
+          {items.map((item) => {
+            const key = wardrobeLineKey(item)
+            return (
+              <div key={key} className="py-8 flex gap-6">
+                <Link href={`/product/${item.id}`} className="w-24 h-32 md:w-32 md:h-40 bg-linen flex-shrink-0 overflow-hidden">
+                  <div className={`w-full h-full bg-gradient-to-br ${item.image || 'from-ivory to-sand'}`} />
+                </Link>
 
-              {/* Info */}
-              <div className="flex-1 flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <Link href={`/product/${item.id}`} className="font-serif text-xl md:text-2xl text-espresso hover:text-bronze transition-colors">
-                      {item.name}
-                    </Link>
-                    <p className="text-taupe text-sm mt-1">One Size</p>
-                  </div>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="text-taupe hover:text-bronze transition-colors"
-                    aria-label="Remove item"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between mt-6">
-                  {/* Quantity Controls */}
-                  <div className="flex items-center border border-sand">
+                <div className="flex-1 flex flex-col justify-between">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <Link href={`/product/${item.id}`} className="font-serif text-xl md:text-2xl text-espresso hover:text-bronze transition-colors">
+                        {item.name}
+                      </Link>
+                      <p className="text-taupe text-sm mt-1">{item.attributes ?? 'One Size'}</p>
+                      {item.customNotes && (
+                        <p className="text-bronze text-xs mt-1 italic">“{item.customNotes}”</p>
+                      )}
+                    </div>
                     <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-linen transition-colors"
+                      onClick={() => removeItem(key)}
+                      className="text-taupe hover:text-bronze transition-colors"
+                      aria-label="Remove item"
                     >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <span className="w-8 h-8 flex items-center justify-center text-sm">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-linen transition-colors"
-                    >
-                      <Plus className="w-3 h-3" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
 
-                  <span className="font-serif text-lg text-espresso">
-                    Rs. {(item.price * item.quantity).toLocaleString()}
-                  </span>
+                  <div className="flex items-center justify-between mt-6">
+                    <div className="flex items-center border border-sand">
+                      <button
+                        onClick={() => updateQuantity(key, item.quantity - 1)}
+                        className="w-8 h-8 flex items-center justify-center hover:bg-linen transition-colors"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-8 h-8 flex items-center justify-center text-sm">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(key, item.quantity + 1)}
+                        className="w-8 h-8 flex items-center justify-center hover:bg-linen transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    <span className="font-serif text-lg text-espresso">
+                      Rs. {(item.price * item.quantity).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
-        {/* Summary */}
         <div className="lg:col-span-1">
           <div className="bg-linen p-8 border border-sand sticky top-32">
             <h2 className="font-serif text-2xl text-espresso mb-6">Order Summary</h2>
-            
+
             <div className="space-y-4 text-sm">
               <div className="flex justify-between text-taupe">
                 <span>Subtotal</span>

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Loader2, ShieldCheck, Truck } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { useWardrobeStore } from '@/store/wardrobeStore'
+import { useWardrobeStore, wardrobeLineKey } from '@/store/wardrobeStore'
 import { getShippingFee } from '@/lib/api/shipping'
 import { placeOrder } from '@/lib/api/orders'
 import GoogleButton from '@/components/GoogleButton'
@@ -135,7 +135,11 @@ export default function CheckoutPage() {
     setError(null)
 
     const { orderId } = await placeOrder({
-      items,
+      items: items.map((i) => ({
+        variant_id: i.variantId ?? i.id,
+        quantity: i.quantity,
+        custom_notes: i.customNotes ?? null,
+      })),
       customer: { fullName, email, phone, address, city, zoneId: 'nationwide' },
       paymentMethod: 'cod',
       subtotal,
@@ -272,9 +276,10 @@ export default function CheckoutPage() {
             <h2 className="font-serif text-2xl text-espresso mb-6">Order Summary</h2>
             <div className="space-y-3 text-sm divide-y divide-sand">
               {items.map((item) => (
-                <div key={item.id} className="flex justify-between py-3">
-                  <span className="text-taupe">{item.name} × {item.quantity}</span>
-                  <span className="text-espresso">Rs. {(item.price * item.quantity).toLocaleString()}</span>
+                <div key={wardrobeLineKey(item)} className="flex justify-between py-3">
+                  <span className="text-taupe">
+                    {item.name}{item.attributes ? ` · ${item.attributes}` : ''} × {item.quantity}
+                  </span>
                 </div>
               ))}
             </div>

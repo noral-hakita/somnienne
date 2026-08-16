@@ -1,8 +1,7 @@
-// DATA ACCESS LAYER — orders. Today: simulated. Phase 3: real server action.
 import type { WardrobeItem } from '@/store/wardrobeStore'
 
 export interface CheckoutPayload {
-  items: WardrobeItem[]
+  items: { variant_id: string; quantity: number; custom_notes?: string | null }[]
   customer: {
     fullName: string
     email: string
@@ -18,10 +17,9 @@ export interface CheckoutPayload {
 }
 
 export async function placeOrder(payload: CheckoutPayload): Promise<{ orderId: string }> {
-  // PHASE 3: this becomes a SERVER ACTION that:
-  //  - re-reads every price from the database (never trusts the browser)
-  //  - validates stock, creates the order as pending_confirmation
-  //  - decrements stock, triggers the confirmation email/WhatsApp
+  // PHASE 3: becomes the real place_order() RPC — server re-prices everything
   await new Promise((resolve) => setTimeout(resolve, 900))
   return { orderId: `SOM-${Date.now().toString().slice(-6)}` }
 }
+
+export type { WardrobeItem }
