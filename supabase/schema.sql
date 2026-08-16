@@ -520,3 +520,43 @@ begin
     is_active = coalesce(active, is_active)
   where id = target;
 end $$;
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.1 · staff order actions
+-- ================================================================
+
+create or replace function public.admin_confirm_order(order_id uuid)
+returns void
+language plpgsql security definer set search_path = public as $$
+declare o public.orders%rowtype;
+begin
+  if not public.is_ops() then raise exception 'Not authorized'; end if;
+  select * into o from public.orders where id = order_id;
+  if not found or o.status <> 'pending_confirmation' then raise exception 'Invalid order state'; end if;
+
+  update public.orders set status = 'confirmed', confirmed_at = now() where id = order_id;
+  insert into public.order_events (order_id, actor_id, from_status, to_status, note)
+  values (order_id, auth.uid(), 'pending_confirmation', 'confirmed', 'Manually confirmed by staff');
+end $$;
+
+create or replace function public.admin_cancel_order(order_id uuid, reason text default 'Cancelled by staff')
+returns void
+language plpgsql security definer set search_path = public as $$
+declare o public.orders%rowtype;
+begin
+  if not public.is_ops() then raise exception 'Not authorized'; end if;
+  select * into o from public.orders where id = order_id;
+  if not found or o.status not in ('pending_confirmation', 'confirmed') then raise exception 'Invalid order state'; end if;
+
+  update public.orders set status = 'cancelled', cancelled_at = now(), cancel_reason = reason where id = order_id;
+
+  -- release the reserved stock, atomically
+  update public.product_variants v set stock = v.stock + oi.quantity
+    from public.order_items oi where oi.order_id = order_id and oi.variant_id = v.id;
+  insert into public.inventory_movements (variant_id, delta, reason, actor_id, note)
+    select oi.variant_id, oi.quantity, 'release', auth.uid(), 'Staff cancel ' || order_id
+      from public.order_items oi where oi.order_id = order_id and oi.variant_id is not null;
+
+  insert into public.order_events (order_id, actor_id, from_status, to_status, note)
+  values (order_id, auth.uid(), o.status, 'cancelled', reason);
+end $$;

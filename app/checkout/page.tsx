@@ -7,12 +7,11 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useWardrobeStore, wardrobeLineKey } from '@/store/wardrobeStore'
 import { getShippingFee } from '@/lib/api/shipping'
-import { placeOrder } from '@/lib/api/orders'
+import { placeOrderServer } from '@/app/actions/orders'
 import GoogleButton from '@/components/GoogleButton'
 
 const CITIES = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Peshawar', 'Quetta', 'Hyderabad', 'Sialkot', 'Other']
 
-// ─── Compact auth panel shown to guests (login/signup tabs) ───
 function AuthPanel() {
   const [tab, setTab] = useState<'login' | 'signup'>('login')
   const [name, setName] = useState('')
@@ -82,7 +81,6 @@ function AuthPanel() {
   )
 }
 
-// ─── The Checkout page ───
 export default function CheckoutPage() {
   const [user, setUser] = useState<User | null>(null)
   const [ready, setReady] = useState(false)
@@ -96,6 +94,10 @@ export default function CheckoutPage() {
   const [city, setCity] = useState('')
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [couponCode, setCouponCode] = useState('')
+  const [discount, setDiscount] = useState(0)
+  const [couponMsg, setCouponMsg] = useState<string | null>(null)
 
   const { items, getSubtotal, clearWardrobe } = useWardrobeStore()
   const subtotal = getSubtotal()
@@ -123,7 +125,21 @@ export default function CheckoutPage() {
     }
   }, [user])
 
-  const total = subtotal + (shippingFee ?? 0)
+  const total = subtotal - discount + (shippingFee ?? 0)
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return
+    const supabase = createClient()
+    const { data } = await supabase.rpc('validate_coupon', { code: couponCode, subtotal })
+    const res = data as { valid: boolean; discount?: number; message?: string; code?: string } | null
+    if (res?.valid) {
+      setDiscount(Number(res.discount ?? 0))
+      setCouponMsg(`Code ${res.code} applied`)
+    } else {
+      setDiscount(0)
+      setCouponMsg(res?.message ?? 'Invalid code')
+    }
+  }
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -134,21 +150,28 @@ export default function CheckoutPage() {
     setPlacing(true)
     setError(null)
 
-    const { orderId } = await placeOrder({
+    const result = await placeOrderServer({
       items: items.map((i) => ({
         variant_id: i.variantId ?? i.id,
         quantity: i.quantity,
         custom_notes: i.customNotes ?? null,
       })),
-      customer: { fullName, email, phone, address, city, zoneId: 'nationwide' },
-      paymentMethod: 'cod',
-      subtotal,
-      shippingFee,
-      total,
+      full_name: fullName,
+      phone,
+      address,
+      city,
+      payment_method: 'cod',
+      coupon_code: discount > 0 ? couponCode : null,
     })
 
+    if (!result.ok) {
+      setError(result.error)
+      setPlacing(false)
+      return
+    }
+
     clearWardrobe()
-    setPlacedOrderId(orderId)
+    setPlacedOrderId(result.orderId)
   }
 
   const inputCls =
@@ -158,7 +181,9 @@ export default function CheckoutPage() {
   if (placedOrderId) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-bronze text-[10px] uppercase tracking-[0.4em] mb-4">Order {placedOrderId}</p>
+        <p className="text-bronze text-[10px] uppercase tracking-[0.4em] mb-4">
+          Order {placedOrderId.slice(0, 8).toUpperCase()}
+        </p>
         <h1 className="font-serif text-4xl md:text-6xl font-light text-espresso mb-6">
           Your order is with <span className="italic text-bronze">our atelier</span>
         </h1>
@@ -196,7 +221,6 @@ export default function CheckoutPage() {
       <h1 className="font-serif text-4xl md:text-5xl font-light text-espresso mb-12">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
-        {/* ─── LEFT: auth (guest) or details (signed in) ─── */}
         <div className="lg:col-span-3">
           {!user ? (
             <>
@@ -213,8 +237,8 @@ export default function CheckoutPage() {
                   <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </div>
                 <div>
-                  <label className={labelCls}>Email</label>
-                  <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <label className={labelCls}>Email (linked to your account)</label>
+                  <input className={`${inputCls} opacity-60`} type="email" value={email} readOnly />
                 </div>
               </div>
               <div>
@@ -270,7 +294,6 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        {/* ─── RIGHT: order summary ─── */}
         <div className="lg:col-span-2">
           <div className="bg-linen border border-sand p-8 sticky top-32">
             <h2 className="font-serif text-2xl text-espresso mb-6">Order Summary</h2>
@@ -280,14 +303,40 @@ export default function CheckoutPage() {
                   <span className="text-taupe">
                     {item.name}{item.attributes ? ` · ${item.attributes}` : ''} × {item.quantity}
                   </span>
+                  <span className="text-espresso">Rs. {(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               ))}
             </div>
+
+            {/* Coupon */}
+            <div className="flex gap-2 mt-6">
+              <input
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="Coupon code"
+                className="flex-1 bg-transparent border border-sand px-3 py-2 text-xs text-espresso placeholder:text-taupe/50 focus:border-bronze outline-none transition-colors"
+              />
+              <button
+                type="button"
+                onClick={applyCoupon}
+                className="px-4 py-2 border border-espresso text-espresso text-[10px] uppercase tracking-[0.2em] hover:bg-espresso hover:text-ivory transition-colors"
+              >
+                Apply
+              </button>
+            </div>
+            {couponMsg && <p className="text-taupe text-xs mt-2">{couponMsg}</p>}
+
             <div className="space-y-3 text-sm mt-6">
               <div className="flex justify-between text-taupe">
                 <span>Subtotal</span>
                 <span className="text-espresso">Rs. {subtotal.toLocaleString()}</span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-taupe">
+                  <span>Coupon</span>
+                  <span className="text-bronze">− Rs. {discount.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between text-taupe">
                 <span>Shipping</span>
                 {shippingFee === null ? (

@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/client'
 
 const items = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { label: 'Pending Orders', icon: Clock, soon: true },
   { label: 'Orders', icon: Package, soon: true },
   { label: 'Shipments', icon: Truck, soon: true },
   { label: 'Inventory', icon: Boxes, soon: true },
