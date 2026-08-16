@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
             <div className="space-y-4">
               {lowStock.map((v) => (
                 <div key={v.sku} className="flex items-center justify-between text-sm">
-                  <p className="text-espresso">{(v.products as any)?.[0]?.name ?? 'Unknown'} · <span className="text-taupe">{v.sku}</span></p>
+                  <p className="text-espresso">{(v.products as any)?.name ?? (v.products as any)?.[0]?.name ?? 'Unknown'} · <span className="text-taupe">{v.sku}</span></p>
                   <p className={v.stock === 0 ? 'text-red-700' : 'text-bronze'}>{v.stock === 0 ? 'Out' : `${v.stock} left`}</p>
                 </div>
               ))}

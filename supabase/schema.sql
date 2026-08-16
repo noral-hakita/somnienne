@@ -560,3 +560,78 @@ begin
   insert into public.order_events (order_id, actor_id, from_status, to_status, note)
   values (order_id, auth.uid(), o.status, 'cancelled', reason);
 end $$;
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.2 (corrected) · coupon hardening
+-- ================================================================
+drop function if exists public.validate_coupon(text, numeric);
+
+create function public.validate_coupon(p_code text, p_subtotal numeric) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare c public.coupons%rowtype; disc numeric;
+begin
+  select * into c from public.coupons
+   where code = upper(btrim(p_code)) and is_active
+     and (starts_at is null or starts_at <= now())
+     and (expires_at is null or expires_at >= now())
+     and (max_uses is null or used_count < max_uses);
+  if not found then return jsonb_build_object('valid', false, 'message', 'Invalid or expired code'); end if;
+  if p_subtotal < c.min_order then
+    return jsonb_build_object('valid', false, 'message', 'Minimum order Rs. ' || c.min_order);
+  end if;
+  disc := case c.type when 'percent' then round(p_subtotal * c.value / 100, 2)
+                      else least(c.value, p_subtotal) end;
+  return jsonb_build_object('valid', true, 'discount', disc, 'code', c.code);
+end $$;
+
+grant execute on function public.validate_coupon(text, numeric) to anon, authenticated, service_role;
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.3 · order lifecycle + stock adjustments
+-- ================================================================
+create or replace function public.admin_advance_order(
+  order_id uuid,
+  new_status public.order_status,
+  courier text default null,
+  tracking text default null
+)
+returns void
+language plpgsql security definer set search_path = public as $$
+declare o public.orders%rowtype;
+begin
+  if not public.is_ops() then raise exception 'Not authorized'; end if;
+  select * into o from public.orders where id = order_id;
+  if not found then raise exception 'Order not found'; end if;
+
+  -- the ladder is law: no skipping steps
+  if not (
+    (o.status = 'confirmed' and new_status = 'packed') or
+    (o.status = 'packed'    and new_status = 'shipped') or
+    (o.status = 'shipped'   and new_status = 'delivered') or
+    (o.status = 'delivered' and new_status = 'returned')
+  ) then raise exception 'Invalid transition % -> %', o.status, new_status; end if;
+
+  if new_status = 'shipped' then
+    if courier is null or btrim(tracking) = '' then raise exception 'Courier and tracking required'; end if;
+    insert into public.shipments (order_id, courier, tracking_number, status, shipped_at)
+    values (order_id, courier, tracking, 'in_transit', now());
+  end if;
+
+  if new_status = 'delivered' then
+    update public.shipments set status = 'delivered' where order_id = order_id and status = 'in_transit';
+  end if;
+
+  update public.orders set status = new_status where id = order_id;
+  insert into public.order_events (order_id, actor_id, from_status, to_status, note)
+  values (order_id, auth.uid(), o.status, new_status, 'Status advanced by staff');
+end $$;
+
+create or replace function public.admin_adjust_stock(variant_id uuid, delta int, reason text default 'adjustment', note text default null)
+returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_staff() then raise exception 'Not authorized'; end if;
+  update public.product_variants set stock = greatest(stock + delta, 0) where id = variant_id;
+  insert into public.inventory_movements (variant_id, delta, reason, actor_id, note)
+  values (variant_id, delta, reason, auth.uid(), note);
+end $$;

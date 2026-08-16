@@ -2,16 +2,21 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Clock, Package, Truck, Boxes, Tags, Users, Store, LogOut } from 'lucide-react'
+import {
+  LayoutDashboard, Clock, Package, Truck, Boxes, Tags, Users,
+  Store, LogOut, Settings as SettingsIcon,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const items = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { label: 'Orders', icon: Package, soon: true },
-  { label: 'Shipments', icon: Truck, soon: true },
-  { label: 'Inventory', icon: Boxes, soon: true },
-  { label: 'Listings', icon: Tags, soon: true },
-  { label: 'Employees', icon: Users, soon: true },
+  { label: 'Pending Orders', href: '/admin/orders/pending', icon: Clock },
+  { label: 'Orders', href: '/admin/orders', icon: Package },
+  { label: 'Shipments', href: '/admin/shipments', icon: Truck },
+  { label: 'Inventory', href: '/admin/inventory', icon: Boxes },
+  { label: 'Listings', href: '/admin/listings', icon: Tags },
+  { label: 'Employees', href: '/admin/employees', icon: Users },
+  { label: 'Settings', href: '/admin/settings', icon: SettingsIcon },
 ]
 
 export default function Sidebar({ name, role }: { name: string; role: string }) {
@@ -26,31 +31,23 @@ export default function Sidebar({ name, role }: { name: string; role: string }) 
 
   return (
     <>
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-60 bg-ivory border-r border-sand">
         <div className="px-6 py-8 border-b border-sand">
           <p className="font-serif text-xl tracking-[0.2em] uppercase text-espresso">Somnienne</p>
           <p className="text-bronze text-[9px] uppercase tracking-[0.35em] mt-1">Atelier Console</p>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-1">
-          {items.map((item) =>
-            item.soon ? (
-              <span key={item.label} className="flex items-center gap-3 px-3 py-2.5 text-xs uppercase tracking-[0.15em] text-taupe/40 cursor-not-allowed">
-                <item.icon className="w-4 h-4" /> {item.label}
-                <span className="ml-auto text-[8px] tracking-[0.2em]">soon</span>
-              </span>
-            ) : (
-              <Link
-                key={item.label}
-                href={item.href!}
-                className={`flex items-center gap-3 px-3 py-2.5 text-xs uppercase tracking-[0.15em] transition-colors ${
-                  pathname === item.href ? 'bg-espresso text-ivory' : 'text-espresso/70 hover:bg-linen'
-                }`}
-              >
-                <item.icon className="w-4 h-4" /> {item.label}
-              </Link>
-            )
-          )}
+          {items.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-2.5 text-xs uppercase tracking-[0.15em] transition-colors ${
+                pathname === item.href ? 'bg-espresso text-ivory' : 'text-espresso/70 hover:bg-linen'
+              }`}
+            >
+              <item.icon className="w-4 h-4" /> {item.label}
+            </Link>
+          ))}
         </nav>
         <div className="px-6 py-6 border-t border-sand space-y-3">
           <p className="text-xs text-taupe">{name} · <span className="uppercase text-[10px] tracking-[0.15em] text-bronze">{role}</span></p>
@@ -63,10 +60,11 @@ export default function Sidebar({ name, role }: { name: string; role: string }) 
         </div>
       </aside>
 
-      {/* Mobile top bar */}
       <header className="md:hidden fixed top-0 inset-x-0 h-16 bg-ivory border-b border-sand flex items-center gap-3 px-4 overflow-x-auto">
         <span className="font-serif tracking-[0.2em] uppercase text-espresso text-sm whitespace-nowrap">Somnienne</span>
         <Link href="/admin" className="text-[10px] uppercase tracking-[0.15em] bg-espresso text-ivory px-3 py-1.5 whitespace-nowrap">Dashboard</Link>
+        <Link href="/admin/orders/pending" className="text-[10px] uppercase tracking-[0.15em] text-taupe px-3 py-1.5 whitespace-nowrap">Pending</Link>
+        <Link href="/admin/listings" className="text-[10px] uppercase tracking-[0.15em] text-taupe px-3 py-1.5 whitespace-nowrap">Listings</Link>
         <button onClick={signOut} className="text-[10px] uppercase tracking-[0.15em] text-taupe px-3 py-1.5 whitespace-nowrap">Sign out</button>
       </header>
     </>

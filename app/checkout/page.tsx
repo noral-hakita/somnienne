@@ -6,7 +6,6 @@ import { Loader2, ShieldCheck, Truck } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useWardrobeStore, wardrobeLineKey } from '@/store/wardrobeStore'
-import { getShippingFee } from '@/lib/api/shipping'
 import { placeOrderServer } from '@/app/actions/orders'
 import GoogleButton from '@/components/GoogleButton'
 
@@ -115,7 +114,14 @@ export default function CheckoutPage() {
   }, [])
 
   useEffect(() => {
-    getShippingFee(subtotal).then(setShippingFee)
+    const supabase = createClient()
+    supabase.rpc('get_checkout_info').then(({ data }) => {
+      const info = (data ?? { shipping_fee: 250, free_shipping_threshold: 15000 }) as {
+        shipping_fee: number
+        free_shipping_threshold: number
+      }
+      setShippingFee(subtotal >= Number(info.free_shipping_threshold) ? 0 : Number(info.shipping_fee))
+    })
   }, [subtotal])
 
   useEffect(() => {
@@ -130,7 +136,14 @@ export default function CheckoutPage() {
   const applyCoupon = async () => {
     if (!couponCode.trim()) return
     const supabase = createClient()
-    const { data } = await supabase.rpc('validate_coupon', { code: couponCode, subtotal })
+    const { data, error } = await supabase.rpc('validate_coupon', {
+      p_code: couponCode,
+      p_subtotal: subtotal,
+    })
+    if (error) {
+      setCouponMsg(error.message) // never fly blind again
+      return
+    }
     const res = data as { valid: boolean; discount?: number; message?: string; code?: string } | null
     if (res?.valid) {
       setDiscount(Number(res.discount ?? 0))
