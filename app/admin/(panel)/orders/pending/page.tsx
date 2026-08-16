@@ -47,9 +47,11 @@ export default function PendingOrdersPage() {
   const act = async (id: string, action: 'confirm' | 'cancel') => {
     setBusyId(id)
     if (action === 'confirm') {
-      await supabase.rpc('admin_confirm_order', { order_id: id })
+      const { error } = await supabase.rpc('admin_confirm_order', { p_order_id: id })
+      if (error) alert(error.message)
     } else {
-      await supabase.rpc('admin_cancel_order', { order_id: id, reason: 'Cancelled by staff' })
+      const { error } = await supabase.rpc('admin_cancel_order', { p_order_id: id, p_reason: 'Cancelled by staff' })
+      if (error) alert(error.message)
     }
     setBusyId(null)
     load()

@@ -102,11 +102,14 @@ export default function AddToWardrobeButton({ product }: { product: StoreProduct
             </div>
           )}
 
-          {selected && selected.stock > 0 && selected.stock <= 5 && !isCustom && (
-            <p className="text-bronze text-xs">Only {selected.stock} left in this combination.</p>
-          )}
-          {selected && selected.stock <= 0 && (
-            <p className="text-red-700 text-xs">This combination is sold out.</p>
+          {selected && !isCustom && (
+            selected.stock <= 0 ? (
+              <p className="text-red-700 text-xs">This combination is sold out.</p>
+            ) : selected.stock <= 5 ? (
+              <p className="text-bronze text-xs">Only {selected.stock} left in this combination.</p>
+            ) : (
+              <p className="text-taupe text-xs">In stock — ready to ship.</p>
+            )
           )}
         </>
       )}

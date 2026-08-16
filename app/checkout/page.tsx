@@ -163,6 +163,21 @@ export default function CheckoutPage() {
     setPlacing(true)
     setError(null)
 
+    // Courtesy check: a kind error before the database has to say no
+    const supabase = createClient()
+    const ids = items.map((i) => i.variantId ?? i.id)
+    const { data: stockRows } = await supabase
+      .from('product_variants').select('id, stock').in('id', ids)
+    const stockById = new Map((stockRows ?? []).map((v: { id: string; stock: number }) => [v.id, v.stock]))
+    for (const i of items) {
+      const available = stockById.get(i.variantId ?? i.id)
+      if (available !== undefined && available < i.quantity) {
+        setError(`Only ${available} left of ${i.name}${i.attributes ? ' · ' + i.attributes : ''}. Please adjust your Wardrobe.`)
+        setPlacing(false)
+        return
+      }
+    }
+
     const result = await placeOrderServer({
       items: items.map((i) => ({
         variant_id: i.variantId ?? i.id,

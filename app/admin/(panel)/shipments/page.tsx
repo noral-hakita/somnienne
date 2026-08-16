@@ -35,7 +35,7 @@ export default function ShipmentsPage() {
 
   const markDelivered = async (orderId: string) => {
     setBusyId(orderId)
-    const { error } = await supabase.rpc('admin_advance_order', { order_id: orderId, new_status: 'delivered' } as never)
+    const { error } = await supabase.rpc('admin_advance_order', { p_order_id: orderId, p_new_status: 'delivered' } as never)
     if (error) alert(error.message)
     setBusyId(null)
     load()

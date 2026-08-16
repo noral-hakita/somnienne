@@ -635,3 +635,75 @@ begin
   insert into public.inventory_movements (variant_id, delta, reason, actor_id, note)
   values (variant_id, delta, reason, auth.uid(), note);
 end $$;
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.4 · parameter collision fixes
+-- RULE: all PL/pgSQL parameters use p_ prefix. No exceptions.
+-- ================================================================
+drop function if exists public.admin_advance_order(uuid, public.order_status, text, text);
+drop function if exists public.admin_cancel_order(uuid, text);
+drop function if exists public.admin_confirm_order(uuid);
+
+create function public.admin_confirm_order(p_order_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare o public.orders%rowtype;
+begin
+  if not public.is_ops() then raise exception 'Not authorized'; end if;
+  select * into o from public.orders where id = p_order_id;
+  if not found or o.status <> 'pending_confirmation' then raise exception 'Invalid order state'; end if;
+  update public.orders set status = 'confirmed', confirmed_at = now() where id = p_order_id;
+  insert into public.order_events (order_id, actor_id, from_status, to_status, note)
+  values (p_order_id, auth.uid(), 'pending_confirmation', 'confirmed', 'Manually confirmed by staff');
+end $$;
+
+create function public.admin_cancel_order(p_order_id uuid, p_reason text default 'Cancelled by staff')
+returns void language plpgsql security definer set search_path = public as $$
+declare o public.orders%rowtype;
+begin
+  if not public.is_ops() then raise exception 'Not authorized'; end if;
+  select * into o from public.orders where id = p_order_id;
+  if not found or o.status not in ('pending_confirmation', 'confirmed') then raise exception 'Invalid order state'; end if;
+  update public.orders set status = 'cancelled', cancelled_at = now(), cancel_reason = p_reason where id = p_order_id;
+  update public.product_variants v set stock = v.stock + oi.quantity
+    from public.order_items oi where oi.order_id = p_order_id and oi.variant_id = v.id;
+  insert into public.inventory_movements (variant_id, delta, reason, actor_id, note)
+    select oi.variant_id, oi.quantity, 'release', auth.uid(), 'Staff cancel ' || p_order_id
+      from public.order_items oi where oi.order_id = p_order_id and oi.variant_id is not null;
+  insert into public.order_events (order_id, actor_id, from_status, to_status, note)
+  values (p_order_id, auth.uid(), o.status, 'cancelled', p_reason);
+end $$;
+
+create function public.admin_advance_order(
+  p_order_id uuid,
+  p_new_status public.order_status,
+  p_courier text default null,
+  p_tracking text default null
+)
+returns void language plpgsql security definer set search_path = public as $$
+declare o public.orders%rowtype;
+begin
+  if not public.is_ops() then raise exception 'Not authorized'; end if;
+  select * into o from public.orders where id = p_order_id;
+  if not found then raise exception 'Order not found'; end if;
+
+  if not (
+    (o.status = 'confirmed' and p_new_status = 'packed') or
+    (o.status = 'packed'    and p_new_status = 'shipped') or
+    (o.status = 'shipped'   and p_new_status = 'delivered') or
+    (o.status = 'delivered' and p_new_status = 'returned')
+  ) then raise exception 'Invalid transition % -> %', o.status, p_new_status; end if;
+
+  if p_new_status = 'shipped' then
+    if p_courier is null or btrim(coalesce(p_tracking, '')) = '' then raise exception 'Courier and tracking required'; end if;
+    insert into public.shipments (order_id, courier, tracking_number, status, shipped_at)
+    values (p_order_id, p_courier, p_tracking, 'in_transit', now());
+  end if;
+
+  if p_new_status = 'delivered' then
+    update public.shipments set status = 'delivered' where order_id = p_order_id and status = 'in_transit';
+  end if;
+
+  update public.orders set status = p_new_status where id = p_order_id;
+  insert into public.order_events (order_id, actor_id, from_status, to_status, note)
+  values (p_order_id, auth.uid(), o.status, p_new_status, 'Status advanced by staff');
+end $$;

@@ -1,12 +1,27 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useWardrobeStore, wardrobeLineKey } from '@/store/wardrobeStore'
 import { Minus, Plus, X } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function WardrobePage() {
   const { items, removeItem, updateQuantity, getSubtotal, clearWardrobe } = useWardrobeStore()
   const subtotal = getSubtotal()
+  const [stockMap, setStockMap] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    const ids = items.map((i) => i.variantId ?? i.id).filter(Boolean)
+    if (ids.length === 0) return
+    createClient()
+      .from('product_variants').select('id, stock').in('id', ids)
+      .then(({ data }) => {
+        const m: Record<string, number> = {}
+        ;(data ?? []).forEach((v: { id: string; stock: number }) => { m[v.id] = v.stock })
+        setStockMap(m)
+      })
+  }, [items])
 
   if (items.length === 0) {
     return (
@@ -54,6 +69,9 @@ export default function WardrobePage() {
                         {item.name}
                       </Link>
                       <p className="text-taupe text-sm mt-1">{item.attributes ?? 'One Size'}</p>
+                      {stockMap[key] !== undefined && item.quantity >= stockMap[key] && (
+                        <p className="text-bronze text-xs mt-1">Only {stockMap[key]} available.</p>
+                      )}
                       {item.customNotes && (
                         <p className="text-bronze text-xs mt-1 italic">“{item.customNotes}”</p>
                       )}
@@ -78,7 +96,8 @@ export default function WardrobePage() {
                       <span className="w-8 h-8 flex items-center justify-center text-sm">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(key, item.quantity + 1)}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-linen transition-colors"
+                        disabled={stockMap[key] !== undefined && item.quantity >= stockMap[key]}
+                        className="w-8 h-8 flex items-center justify-center hover:bg-linen transition-colors disabled:opacity-30"
                       >
                         <Plus className="w-3 h-3" />
                       </button>

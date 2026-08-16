@@ -55,15 +55,15 @@ export default function OrdersPage() {
 
   const advance = async (id: string, status: string) => {
     setBusyId(id)
-    const args: Record<string, unknown> = { order_id: id, new_status: status }
+    const args: Record<string, unknown> = { p_order_id: id, p_new_status: status }
     if (status === 'shipped') {
       if (!tracking[id]?.trim()) {
         alert('Enter the tracking number first.')
         setBusyId(null)
         return
       }
-      args.courier = courier[id] ?? 'TCS'
-      args.tracking = tracking[id]
+      args.p_courier = courier[id] ?? 'TCS'
+      args.p_tracking = tracking[id]
     }
     const { error } = await supabase.rpc('admin_advance_order', args as never)
     if (error) alert(error.message)
