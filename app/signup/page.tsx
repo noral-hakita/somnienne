@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import GoogleButton from '@/components/GoogleButton'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -101,6 +102,12 @@ export default function SignupPage() {
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create account'}
           </button>
         </form>
+        <div className="my-8 flex items-center gap-4">
+          <span className="flex-1 h-px bg-sand" />
+          <span className="text-[10px] uppercase tracking-[0.3em] text-taupe">or</span>
+          <span className="flex-1 h-px bg-sand" />
+        </div>
+        <GoogleButton />
 
         <p className="text-center text-sm text-taupe mt-8">
           Already have an account?{' '}
