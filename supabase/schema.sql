@@ -707,3 +707,27 @@ begin
   insert into public.order_events (order_id, actor_id, from_status, to_status, note)
   values (p_order_id, auth.uid(), o.status, p_new_status, 'Status advanced by staff');
 end $$;
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.5 · product media storage
+-- Rule: bucket is public-read (storefront), staff-only write.
+-- ================================================================
+insert into storage.buckets (id, name, public)
+values ('product-media', 'product-media', true)
+on conflict (id) do nothing;
+
+create policy "media public read"
+on storage.objects for select
+using (bucket_id = 'product-media');
+
+create policy "media staff insert"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'product-media' and public.is_staff());
+
+create policy "media staff update"
+on storage.objects for update to authenticated
+using (bucket_id = 'product-media' and public.is_staff());
+
+create policy "media staff delete"
+on storage.objects for delete to authenticated
+using (bucket_id = 'product-media' and public.is_staff());

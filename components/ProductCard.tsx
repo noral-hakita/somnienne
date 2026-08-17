@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useWardrobeStore } from '@/store/wardrobeStore'
 import type { StoreProduct } from '@/lib/api/products'
@@ -35,6 +36,7 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
   const variants = product.variants ?? []
   const single = variants.length === 1 ? variants[0] : null
   const soldOut = variants.length === 0 || variants.every((v) => v.stock <= 0)
+  const photo = product.images[0]
 
   const quickAdd = () => {
     if (!single || single.stock <= 0) return
@@ -43,7 +45,7 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
       variantId: single.id,
       name: product.name,
       price: product.price,
-      image: product.imageGradient,
+      image: product.images[0] ?? product.imageGradient,
       attributes: single.isCustom ? 'Custom size' : `${single.size} · ${single.color}`,
     })
   }
@@ -59,12 +61,24 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
       style={{ transformStyle: 'preserve-3d', transition: 'transform 0.1s ease-out, border-color 0.5s ease' }}
     >
       <Link href={`/product/${product.id}`} className="block aspect-[3/4] overflow-hidden relative">
-        <div className={`absolute inset-0 bg-gradient-to-br ${product.imageGradient} transition-transform duration-1000 group-hover:scale-105`} />
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="font-serif text-2xl italic text-espresso/20 tracking-widest uppercase">
-            {product.name.split(' ')[1]}
-          </span>
-        </div>
+        {photo ? (
+          <Image
+            src={photo}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform duration-1000 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, 33vw"
+          />
+        ) : (
+          <div className={`absolute inset-0 bg-gradient-to-br ${product.imageGradient} transition-transform duration-1000 group-hover:scale-105`} />
+        )}
+        {!photo && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="font-serif text-2xl italic text-espresso/20 tracking-widest uppercase">
+              {product.name.split(' ')[1]}
+            </span>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-espresso/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </Link>
 

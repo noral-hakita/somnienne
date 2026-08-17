@@ -21,6 +21,7 @@ export interface StoreProduct {
   slug: string
   price: number
   imageGradient: string
+  images: string[]
   shortDescription: string
   fullDescription: string
   categoryName: string | null
@@ -38,6 +39,14 @@ const mapVariants = (rows: any[]): StoreVariant[] =>
     isCustom: v.is_custom,
   }))
 
+const mapImages = (rows: any[]): string[] =>
+  ((rows ?? []) as { url: string; position: number }[])
+    .sort((a, b) => a.position - b.position)
+    .map((m) => m.url)
+
+const SELECT =
+  'id, name, slug, retail_price, sale_price, short_description, full_description, custom_lead_time_days, categories(name), product_variants(id, sku, attributes, stock, is_custom, image_url), product_media(url, type, position)'
+
 export async function getCategories(): Promise<StoreCategory[]> {
   const supabase = await createClient()
   const { data } = await supabase
@@ -49,8 +58,7 @@ export async function getCategories(): Promise<StoreCategory[]> {
 export async function getProducts(): Promise<StoreProduct[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
-    .from('products')
-    .select('id, name, slug, retail_price, sale_price, short_description, full_description, custom_lead_time_days, categories(name), product_variants(id, sku, attributes, stock, is_custom, image_url)')
+    .from('products').select(SELECT)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
@@ -62,6 +70,7 @@ export async function getProducts(): Promise<StoreProduct[]> {
     slug: p.slug,
     price: Number(p.sale_price ?? p.retail_price),
     imageGradient: p.product_variants?.[0]?.image_url ?? 'from-ivory to-sand',
+    images: mapImages(p.product_media),
     shortDescription: p.short_description ?? '',
     fullDescription: p.full_description ?? '',
     categoryName: p.categories?.name ?? null,
@@ -73,8 +82,7 @@ export async function getProducts(): Promise<StoreProduct[]> {
 export async function getProductById(id: string): Promise<StoreProduct | undefined> {
   const supabase = await createClient()
   const { data, error } = await supabase
-    .from('products')
-    .select('id, name, slug, retail_price, sale_price, short_description, full_description, custom_lead_time_days, categories(name), product_variants(id, sku, attributes, stock, is_custom, image_url)')
+    .from('products').select(SELECT)
     .eq('id', id)
     .eq('is_active', true)
     .single()
@@ -88,6 +96,7 @@ export async function getProductById(id: string): Promise<StoreProduct | undefin
     slug: p.slug,
     price: Number(p.sale_price ?? p.retail_price),
     imageGradient: p.product_variants?.[0]?.image_url ?? 'from-ivory to-sand',
+    images: mapImages(p.product_media),
     shortDescription: p.short_description ?? '',
     fullDescription: p.full_description ?? '',
     categoryName: p.categories?.name ?? null,

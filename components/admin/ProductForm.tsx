@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ImagePlus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Category {
@@ -23,7 +23,6 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Basic info
   const [name, setName] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [shortDescription, setShortDescription] = useState('')
@@ -31,8 +30,8 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
   const [retailPrice, setRetailPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
   const [gradient, setGradient] = useState(GRADIENTS[0])
+  const [files, setFiles] = useState<File[]>([])
 
-  // Variants
   const [hasSizes, setHasSizes] = useState(false)
   const [sizes, setSizes] = useState('')
   const [colors, setColors] = useState('')
@@ -65,16 +64,38 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
           retail_price: Number(retailPrice),
           sale_price: salePrice ? Number(salePrice) : null,
           has_sizes: hasSizes,
-          is_active: false, // Always start as draft
+          is_active: false,
         })
         .select()
         .single()
 
       if (productError) throw productError
 
-      // 2. Generate variants
-      const sizeList = hasSizes ? sizes.split(',').map(s => s.trim()).filter(Boolean) : ['One Size']
-      const colorList = colors ? colors.split(',').map(c => c.trim()).filter(Boolean) : ['Default']
+      // 2. Upload photos to Storage (staff-only write, public read)
+      const urls: string[] = []
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const path = `products/${product.id}/${Date.now()}-${i}-${file.name.replace(/[^a-zA-Z0-9.]+/g, '-')}`
+        const { error: upErr } = await supabase.storage
+          .from('product-media')
+          .upload(path, file, { contentType: file.type })
+        if (upErr) throw upErr
+        urls.push(supabase.storage.from('product-media').getPublicUrl(path).data.publicUrl)
+      }
+
+      // 3. Save media rows
+      if (urls.length > 0) {
+        const { error: mediaErr } = await supabase.from('product_media').insert(
+          urls.map((url, i) => ({ product_id: product.id, url, type: 'image', position: i }))
+        )
+        if (mediaErr) throw mediaErr
+      }
+
+      const primaryVisual = urls[0] ?? gradient
+
+      // 4. Generate variants
+      const sizeList = hasSizes ? sizes.split(',').map((s) => s.trim()).filter(Boolean) : ['One Size']
+      const colorList = colors ? colors.split(',').map((c) => c.trim()).filter(Boolean) : ['Default']
 
       const variants = []
       for (const size of sizeList) {
@@ -86,20 +107,18 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
             attributes: { size, color },
             stock: Number(stock),
             is_custom: false,
-            image_url: gradient,
+            image_url: primaryVisual,
           })
         }
       }
-
-      // 3. Add custom size option if hasSizes is true
       if (hasSizes) {
         variants.push({
           product_id: product.id,
           sku: `SOM-${slug}-CUSTOM`.toUpperCase(),
           attributes: { size: 'Custom', color: colorList[0] },
-          stock: 999, // Custom sizes are made to order
+          stock: 999,
           is_custom: true,
-          image_url: gradient,
+          image_url: primaryVisual,
         })
       }
 
@@ -118,7 +137,6 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Basic Info */}
       <div>
         <h3 className="text-xs uppercase tracking-[0.25em] text-espresso mb-4">Basic info</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,7 +164,6 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
       </div>
 
-      {/* Pricing */}
       <div>
         <h3 className="text-xs uppercase tracking-[0.25em] text-espresso mb-4">Pricing</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -161,17 +178,47 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
       </div>
 
-      {/* Variants */}
+      {/* Photography */}
+      <div>
+        <h3 className="text-xs uppercase tracking-[0.25em] text-espresso mb-4">Photography</h3>
+        <label className="flex flex-col items-center justify-center gap-2 border border-dashed border-sand hover:border-bronze transition-colors p-8 cursor-pointer bg-ivory">
+          <ImagePlus className="w-6 h-6 text-bronze" />
+          <span className="text-xs uppercase tracking-[0.2em] text-taupe">
+            {files.length > 0 ? `${files.length} photo(s) selected` : 'Choose product photos'}
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+          />
+        </label>
+        <p className="text-taupe text-xs mt-2 italic">
+          No photos yet? A quiet gradient stands in until your shoot day.
+        </p>
+        <div className="mt-4">
+          <label className={labelCls}>Fallback gradient</label>
+          <div className="grid grid-cols-6 md:grid-cols-6 gap-2">
+            {GRADIENTS.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGradient(g)}
+                className={`aspect-square bg-gradient-to-br ${g} border-2 transition-all ${
+                  gradient === g ? 'border-bronze scale-105' : 'border-transparent'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div>
         <h3 className="text-xs uppercase tracking-[0.25em] text-espresso mb-4">Variants</h3>
         <div className="mb-4">
           <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hasSizes}
-              onChange={(e) => setHasSizes(e.target.checked)}
-              className="w-4 h-4 accent-bronze"
-            />
+            <input type="checkbox" checked={hasSizes} onChange={(e) => setHasSizes(e.target.checked)} className="w-4 h-4 accent-bronze" />
             <span className="text-sm text-espresso">This product has sizes</span>
           </label>
         </div>
@@ -208,23 +255,6 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
         )}
       </div>
 
-      {/* Placeholder gradient */}
-      <div>
-        <h3 className="text-xs uppercase tracking-[0.25em] text-espresso mb-4">Placeholder gradient (for now)</h3>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-          {GRADIENTS.map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGradient(g)}
-              className={`aspect-square bg-gradient-to-br ${g} border-2 transition-all ${
-                gradient === g ? 'border-bronze scale-105' : 'border-transparent'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <button
@@ -234,7 +264,6 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
       >
         {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create product (as draft)'}
       </button>
-
       <p className="text-taupe text-xs text-center">
         Products are created as drafts. Activate them from the list above when ready.
       </p>

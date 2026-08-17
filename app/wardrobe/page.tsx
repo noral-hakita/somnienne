@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useWardrobeStore, wardrobeLineKey } from '@/store/wardrobeStore'
 import { Minus, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 
 export default function WardrobePage() {
   const { items, removeItem, updateQuantity, getSubtotal, clearWardrobe } = useWardrobeStore()
@@ -58,8 +59,12 @@ export default function WardrobePage() {
             const key = wardrobeLineKey(item)
             return (
               <div key={key} className="py-8 flex gap-6">
-                <Link href={`/product/${item.id}`} className="w-24 h-32 md:w-32 md:h-40 bg-linen flex-shrink-0 overflow-hidden">
-                  <div className={`w-full h-full bg-gradient-to-br ${item.image || 'from-ivory to-sand'}`} />
+                <Link href={`/product/${item.id}`} className="relative w-24 h-32 md:w-32 md:h-40 bg-linen flex-shrink-0 overflow-hidden">
+                  {item.image?.startsWith('http') ? (
+                    <Image src={item.image} alt={item.name} fill className="object-cover" sizes="128px" />
+                  ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${item.image || 'from-ivory to-sand'}`} />
+                  )}
                 </Link>
 
                 <div className="flex-1 flex flex-col justify-between">

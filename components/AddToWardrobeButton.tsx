@@ -33,7 +33,7 @@ export default function AddToWardrobeButton({ product }: { product: StoreProduct
       variantId: selected.id,
       name: product.name,
       price: product.price,
-      image: product.imageGradient,
+       image: product.images[0] ?? product.imageGradient,
       attributes: isCustom ? 'Custom size' : `${size} · ${color}`,
       customNotes: isCustom && notes ? notes : undefined,
     })

@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import { getProductById } from '@/lib/api/products'
 import AddToWardrobeButton from '@/components/AddToWardrobeButton'
+import ProductGallery from '@/components/ProductGallery'
+import ProductReviews from '@/components/ProductReviews'
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,15 +15,20 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   return (
     <div className="max-w-7xl mx-auto px-6 pt-32 pb-24">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
-        <div className="aspect-[3/4] bg-linen overflow-hidden sticky top-24">
-          <div className={`w-full h-full bg-gradient-to-br ${product.imageGradient} transition-transform duration-1000 hover:scale-105`} />
-        </div>
+        <ProductGallery
+          images={product.images}
+          gradient={product.imageGradient}
+          name={product.name}
+        />
 
         <div className="flex flex-col">
-          <p className="text-bronze text-[10px] md:text-xs uppercase tracking-[0.4em] mb-4">The Collection</p>
+          <p className="text-bronze text-[10px] md:text-xs uppercase tracking-[0.4em] mb-4">
+            {product.categoryName ?? 'The Collection'}
+          </p>
           <h1 className="font-serif text-4xl md:text-5xl font-light text-espresso leading-tight">{product.name}</h1>
           <p className="font-serif text-2xl text-espresso/80 mt-4 mb-8">Rs. {product.price.toLocaleString()}</p>
           <p className="text-taupe text-base leading-relaxed mb-12">{product.fullDescription}</p>
+
           <AddToWardrobeButton product={product} />
 
           <div className="mt-12 border-t border-sand">
@@ -34,6 +41,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <p className="text-taupe text-sm leading-relaxed">Complimentary shipping on orders over Rs. 15,000. Easy returns within 14 days of delivery.</p>
             </div>
           </div>
+
+          <ProductReviews productId={product.id} />
         </div>
       </div>
     </div>
