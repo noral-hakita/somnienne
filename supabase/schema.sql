@@ -744,3 +744,11 @@ create or replace function public.get_showcase_category() returns text
 language sql stable security definer set search_path = public as $$
   select value #>> '{}' from public.settings where key = 'showcase_category_id';
 $$;
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.8 · staff insert on settings
+-- (upsert = insert-on-conflict; it needs its own policy)
+-- ================================================================
+create policy settings_staff_ins on public.settings
+for insert to authenticated
+with check (public.is_staff());
