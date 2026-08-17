@@ -113,3 +113,19 @@ export async function getProductById(id: string): Promise<StoreProduct | undefin
   if (error || !data) return undefined
   return mapProduct(data)
 }
+export async function getShowcase(): Promise<{ products: StoreProduct[]; categoryName: string } | null> {
+  const supabase = await createClient()
+  const { data: catId } = await supabase.rpc('get_showcase_category')
+  if (!catId) return null
+
+  const { data: cat } = await supabase.from('categories').select('name').eq('id', catId).single()
+  const { data } = await supabase
+    .from('products').select(SELECT)
+    .eq('is_active', true)
+    .eq('category_id', catId)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  if (!data || data.length === 0) return null
+  return { products: (data as any[]).map(mapProduct), categoryName: cat?.name ?? 'The Collection' }
+}

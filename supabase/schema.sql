@@ -736,3 +736,11 @@ using (bucket_id = 'product-media' and public.is_staff());
 -- SOMNIENNE · SCHEMA ADDENDUM v1.6 · color-tagged photography
 -- ================================================================
 alter table public.product_media add column if not exists color text;
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.7 · public showcase reader
+-- ================================================================
+create or replace function public.get_showcase_category() returns text
+language sql stable security definer set search_path = public as $$
+  select value #>> '{}' from public.settings where key = 'showcase_category_id';
+$$;

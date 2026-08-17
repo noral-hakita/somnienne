@@ -197,7 +197,7 @@ export default function ProductForm({
   const labelCls = 'block text-[10px] uppercase tracking-[0.25em] text-taupe mb-2'
 
   const uploadBox = (key: string | null, label: string) => (
-    <div>
+    <div key={key ?? 'general'}>
       <label className="flex flex-col items-center justify-center gap-2 border border-dashed border-sand hover:border-bronze transition-colors p-5 cursor-pointer bg-ivory">
         <ImagePlus className="w-5 h-5 text-bronze" />
         <span className="text-[10px] uppercase tracking-[0.2em] text-taupe text-center">

@@ -13,6 +13,8 @@ const FIELDS = [
 
 export default function SettingsPage() {
   const [values, setValues] = useState<Record<string, string>>({})
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
+  const [showcaseId, setShowcaseId] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -20,28 +22,44 @@ export default function SettingsPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('settings').select('key, value').then(({ data }) => {
+    (async () => {
+      const [s, c] = await Promise.all([
+        supabase.from('settings').select('key, value'),
+        supabase.from('categories').select('id, name').eq('is_active', true).order('name'),
+      ])
       const map: Record<string, string> = {}
-      ;(data ?? []).forEach((row: { key: string; value: unknown }) => {
+      ;(s.data ?? []).forEach((row: { key: string; value: unknown }) => {
         map[row.key] = String(row.value)
       })
       setValues(map)
+      setShowcaseId(map['showcase_category_id'] ?? '')
+      setCategories((c.data ?? []) as { id: string; name: string }[])
       setLoading(false)
-    })
+    })()
   }, [])
 
-  const save = async () => {
-    setSaving(true)
-    setSaved(false)
-    for (const f of FIELDS) {
-      // Number() on purpose: jsonb must store a JSON number, not a string,
-      // or the SQL casts (value::numeric) would break.
-      await supabase.from('settings').update({ value: Number(values[f.key]) }).eq('key', f.key)
-    }
-    setSaving(false)
+  const flash = () => {
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
+
+  const save = async () => {
+    setSaving(true)
+    for (const f of FIELDS) {
+      await supabase.from('settings').update({ value: Number(values[f.key]) }).eq('key', f.key)
+    }
+    setSaving(false)
+    flash()
+  }
+
+  const saveShowcase = async () => {
+    setSaving(true)
+    await supabase.from('settings').upsert({ key: 'showcase_category_id', value: showcaseId })
+    setSaving(false)
+    flash()
+  }
+
+  const inputCls = 'w-full bg-transparent border border-sand px-4 py-3 text-espresso focus:border-bronze outline-none transition-colors'
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -50,37 +68,58 @@ export default function SettingsPage() {
         <h1 className="font-serif text-3xl md:text-4xl font-light text-espresso">
           Set<span className="italic text-bronze">tings</span>
         </h1>
-        <p className="text-taupe text-sm mt-2">
-          These values feed the checkout display and the <code className="text-bronze">place_order</code> RPC instantly.
-        </p>
       </div>
 
       {loading ? (
         <Loader2 className="w-5 h-5 animate-spin text-bronze" />
       ) : (
-        <div className="bg-ivory border border-sand p-6 space-y-6">
-          {FIELDS.map((f) => (
-            <div key={f.key}>
-              <label className="block text-[10px] uppercase tracking-[0.25em] text-taupe mb-2">{f.label}</label>
-              <input
-                type="number"
-                value={values[f.key] ?? ''}
-                onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-                className="w-full bg-transparent border border-sand px-4 py-3 text-espresso focus:border-bronze outline-none transition-colors"
-              />
-              <p className="text-taupe text-xs mt-1 italic">{f.hint}</p>
-            </div>
-          ))}
+        <>
+          <div className="bg-ivory border border-sand p-6 space-y-6">
+            {FIELDS.map((f) => (
+              <div key={f.key}>
+                <label className="block text-[10px] uppercase tracking-[0.25em] text-taupe mb-2">{f.label}</label>
+                <input
+                  type="number"
+                  value={values[f.key] ?? ''}
+                  onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                  className={inputCls}
+                />
+                <p className="text-taupe text-xs mt-1 italic">{f.hint}</p>
+              </div>
+            ))}
+            <button
+              onClick={save}
+              disabled={saving}
+              className="w-full bg-espresso text-ivory py-4 text-xs uppercase tracking-[0.25em] hover:bg-bronze transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Save className="w-4 h-4" /> {saved ? 'Saved ✓' : 'Save settings'}
+            </button>
+          </div>
 
-          <button
-            onClick={save}
-            disabled={saving}
-            className="w-full bg-espresso text-ivory py-4 text-xs uppercase tracking-[0.25em] hover:bg-bronze transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saved ? 'Saved ✓' : 'Save settings'}
-          </button>
-        </div>
+          <div className="bg-ivory border border-sand p-6 space-y-4">
+            <div>
+              <label className="block text-[10px] uppercase tracking-[0.25em] text-taupe mb-2">
+                Home showcase category
+              </label>
+              <select value={showcaseId} onChange={(e) => setShowcaseId(e.target.value)} className={inputCls}>
+                <option value="">— No showcase —</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <p className="text-taupe text-xs mt-1 italic">
+                The 3D scroll stage on the landing page features this category's active products.
+              </p>
+            </div>
+            <button
+              onClick={saveShowcase}
+              disabled={saving}
+              className="w-full bg-espresso text-ivory py-4 text-xs uppercase tracking-[0.25em] hover:bg-bronze transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Save className="w-4 h-4" /> {saved ? 'Saved ✓' : 'Save showcase'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   )

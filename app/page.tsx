@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { getFeaturedProducts } from '@/lib/api/products'
+import { getFeaturedProducts, getShowcase } from '@/lib/api/products'
 import ProductCard from '@/components/ProductCard'
+import Showcase from '@/components/Showcase'
 
 export default async function Home() {
-  const featured = await getFeaturedProducts()
+  const [featured, showcase] = await Promise.all([getFeaturedProducts(), getShowcase()])
 
   return (
     <div>
@@ -31,6 +32,28 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* 3D scroll showcase (admin-selected category) */}
+      {showcase && <Showcase products={showcase.products} categoryName={showcase.categoryName} />}
+
+      {/* Philosophy */}
+      <section className="bg-linen py-28 px-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-bronze text-[10px] uppercase tracking-[0.4em] mb-6">Our Philosophy</p>
+          <p className="font-serif text-2xl md:text-4xl font-light text-espresso leading-snug">
+            "Sleep is not an escape from life. <span className="italic text-bronze">It is the quiet half of it.</span>"
+          </p>
+          <p className="text-taupe text-sm md:text-base leading-relaxed mt-8 max-w-xl mx-auto">
+            Every Somnienne piece is cut for stillness — breathable fabrics, honest stitching, and silhouettes that ask nothing of you. We make fewer things, slowly, so your nights can be lighter.
+          </p>
+          <Link
+            href="/story"
+            className="inline-block mt-10 border border-espresso px-10 py-4 text-xs uppercase tracking-[0.25em] text-espresso hover:bg-espresso hover:text-ivory transition-colors duration-500"
+          >
+            Read our story
+          </Link>
+        </div>
+      </section>
+
       {/* Featured pieces */}
       {featured.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 py-24">
@@ -52,25 +75,6 @@ export default async function Home() {
           </div>
         </section>
       )}
-
-      {/* Philosophy teaser */}
-      <section className="bg-linen py-28 px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-bronze text-[10px] uppercase tracking-[0.4em] mb-6">Our Philosophy</p>
-          <p className="font-serif text-2xl md:text-4xl font-light text-espresso leading-snug">
-            "Sleep is not an escape from life. <span className="italic text-bronze">It is the quiet half of it.</span>"
-          </p>
-          <p className="text-taupe text-sm md:text-base leading-relaxed mt-8 max-w-xl mx-auto">
-            Every Somnienne piece is cut for stillness — breathable fabrics, honest stitching, and silhouettes that ask nothing of you. We make fewer things, slowly, so your nights can be lighter.
-          </p>
-          <Link
-            href="/story"
-            className="inline-block mt-10 border border-espresso px-10 py-4 text-xs uppercase tracking-[0.25em] text-espresso hover:bg-espresso hover:text-ivory transition-colors duration-500"
-          >
-            Read our story
-          </Link>
-        </div>
-      </section>
     </div>
   )
 }
