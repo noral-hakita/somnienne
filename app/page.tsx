@@ -22,7 +22,7 @@ export default async function Home() {
             href="/collection"
             className="inline-block bg-espresso text-ivory px-10 py-4 text-xs uppercase tracking-[0.25em] font-medium hover:bg-bronze transition-colors duration-500"
           >
-            Explore the Wardrobe
+            Explore the Collection
           </Link>
         </div>
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 text-espresso/30">

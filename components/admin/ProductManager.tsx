@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Plus, Eye, EyeOff, Trash2, Star } from 'lucide-react'
+import { Loader2, Plus, Eye, EyeOff, Trash2, Star, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import ProductForm from './ProductForm'
 
@@ -19,6 +19,7 @@ export default function ProductManager() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -60,9 +61,12 @@ export default function ProductManager() {
         </button>
       </div>
 
-      {showForm && (
+      {(showForm || editingId) && (
         <div className="bg-ivory border border-sand p-8">
-          <ProductForm onSuccess={() => { setShowForm(false); loadProducts() }} />
+          <ProductForm
+            existingId={editingId}
+            onSuccess={() => { setShowForm(false); setEditingId(null); loadProducts() }}
+          />
         </div>
       )}
 
@@ -90,6 +94,13 @@ export default function ProductManager() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { setShowForm(false); setEditingId(p.id) }}
+                      className="p-2 text-taupe hover:text-espresso transition-colors"
+                      title="Edit listing"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={async () => {
                         await supabase.from('products').update({ is_featured: !p.is_featured }).eq('id', p.id)

@@ -731,3 +731,8 @@ using (bucket_id = 'product-media' and public.is_staff());
 create policy "media staff delete"
 on storage.objects for delete to authenticated
 using (bucket_id = 'product-media' and public.is_staff());
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.6 · color-tagged photography
+-- ================================================================
+alter table public.product_media add column if not exists color text;

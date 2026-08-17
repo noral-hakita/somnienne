@@ -15,6 +15,11 @@ export interface StoreCategory {
   slug: string
 }
 
+export interface StoreMedia {
+  url: string
+  color: string | null
+}
+
 export interface StoreProduct {
   id: string
   name: string
@@ -22,8 +27,10 @@ export interface StoreProduct {
   price: number
   imageGradient: string
   images: string[]
+  media: StoreMedia[]
   shortDescription: string
   fullDescription: string
+  careInstructions: string | null
   categoryName: string | null
   customLeadTimeDays: number
   variants: StoreVariant[]
@@ -39,13 +46,32 @@ const mapVariants = (rows: any[]): StoreVariant[] =>
     isCustom: v.is_custom,
   }))
 
-const mapImages = (rows: any[]): string[] =>
-  ((rows ?? []) as { url: string; position: number }[])
-    .sort((a, b) => a.position - b.position)
-    .map((m) => m.url)
+const mapMedia = (rows: any[]): StoreMedia[] =>
+  ((rows ?? []) as any[])
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((m) => ({ url: m.url, color: m.color ?? null }))
 
 const SELECT =
-  'id, name, slug, retail_price, sale_price, short_description, full_description, custom_lead_time_days, categories(name), product_variants(id, sku, attributes, stock, is_custom, image_url), product_media(url, type, position)'
+  'id, name, slug, retail_price, sale_price, short_description, full_description, care_instructions, custom_lead_time_days, categories(name), product_variants(id, sku, attributes, stock, is_custom, image_url), product_media(url, color, position)'
+
+const mapProduct = (p: any): StoreProduct => {
+  const media = mapMedia(p.product_media)
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    price: Number(p.sale_price ?? p.retail_price),
+    imageGradient: p.product_variants?.[0]?.image_url ?? 'from-ivory to-sand',
+    images: media.map((m) => m.url),
+    media,
+    shortDescription: p.short_description ?? '',
+    fullDescription: p.full_description ?? '',
+    careInstructions: p.care_instructions ?? null,
+    categoryName: p.categories?.name ?? null,
+    customLeadTimeDays: p.custom_lead_time_days ?? 7,
+    variants: mapVariants(p.product_variants),
+  }
+}
 
 export async function getCategories(): Promise<StoreCategory[]> {
   const supabase = await createClient()
@@ -61,22 +87,20 @@ export async function getProducts(): Promise<StoreProduct[]> {
     .from('products').select(SELECT)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
-
   if (error || !data) return []
+  return (data as any[]).map(mapProduct)
+}
 
-  return (data as any[]).map((p) => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    price: Number(p.sale_price ?? p.retail_price),
-    imageGradient: p.product_variants?.[0]?.image_url ?? 'from-ivory to-sand',
-    images: mapImages(p.product_media),
-    shortDescription: p.short_description ?? '',
-    fullDescription: p.full_description ?? '',
-    categoryName: p.categories?.name ?? null,
-    customLeadTimeDays: p.custom_lead_time_days ?? 7,
-    variants: mapVariants(p.product_variants),
-  }))
+export async function getFeaturedProducts(): Promise<StoreProduct[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('products').select(SELECT)
+    .eq('is_active', true)
+    .eq('is_featured', true)
+    .order('created_at', { ascending: false })
+    .limit(4)
+  if (error || !data) return []
+  return (data as any[]).map(mapProduct)
 }
 
 export async function getProductById(id: string): Promise<StoreProduct | undefined> {
@@ -86,51 +110,6 @@ export async function getProductById(id: string): Promise<StoreProduct | undefin
     .eq('id', id)
     .eq('is_active', true)
     .single()
-
   if (error || !data) return undefined
-  const p = data as any
-
-  return {
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    price: Number(p.sale_price ?? p.retail_price),
-    imageGradient: p.product_variants?.[0]?.image_url ?? 'from-ivory to-sand',
-    images: mapImages(p.product_media),
-    shortDescription: p.short_description ?? '',
-    fullDescription: p.full_description ?? '',
-    categoryName: p.categories?.name ?? null,
-    customLeadTimeDays: p.custom_lead_time_days ?? 7,
-    variants: mapVariants(p.product_variants),
-  }
-}
-export async function getFeaturedProducts(): Promise<StoreProduct[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('products')
-    .select(
-      'id, name, slug, retail_price, sale_price, short_description, full_description, custom_lead_time_days, categories(name), product_variants(id, sku, attributes, stock, is_custom, image_url), product_media(url, type, position)'
-    )
-    .eq('is_active', true)
-    .eq('is_featured', true)
-    .order('created_at', { ascending: false })
-    .limit(4)
-
-  if (error || !data) return []
-
-  return (data as any[]).map((p) => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    price: Number(p.sale_price ?? p.retail_price),
-    imageGradient: p.product_variants?.[0]?.image_url ?? 'from-ivory to-sand',
-    images: ((p.product_media ?? []) as { url: string; position: number }[])
-      .sort((a, b) => a.position - b.position)
-      .map((m) => m.url),
-    shortDescription: p.short_description ?? '',
-    fullDescription: p.full_description ?? '',
-    categoryName: p.categories?.name ?? null,
-    customLeadTimeDays: p.custom_lead_time_days ?? 7,
-    variants: mapVariants(p.product_variants),
-  }))
+  return mapProduct(data)
 }
