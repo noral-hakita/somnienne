@@ -4,6 +4,7 @@ import "./globals.css";
 import SmoothScroll from "@/components/SmoothScroll";
 import Loader from "@/components/Loader";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({
           <Loader />
           <Navbar /> {/* <--- ADD THIS */}
           <main>{children}</main>
+          <Footer />
         </SmoothScroll>
       </body>
     </html>

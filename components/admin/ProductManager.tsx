@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Plus, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Eye, EyeOff, Trash2, Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import ProductForm from './ProductForm'
 
@@ -90,6 +90,16 @@ export default function ProductManager() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        await supabase.from('products').update({ is_featured: !p.is_featured }).eq('id', p.id)
+                        loadProducts()
+                      }}
+                      className={`p-2 transition-colors ${p.is_featured ? 'text-bronze' : 'text-taupe/40 hover:text-bronze'}`}
+                      title={p.is_featured ? 'Remove from home' : 'Feature on home'}
+                    >
+                      <Star className="w-4 h-4" />
+                    </button>
                   <button
                     onClick={() => toggleActive(p.id, p.is_active)}
                     className={`p-2 transition-colors ${p.is_active ? 'text-bronze hover:text-espresso' : 'text-taupe hover:text-bronze'}`}
