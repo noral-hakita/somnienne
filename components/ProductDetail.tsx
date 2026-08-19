@@ -58,7 +58,7 @@ export default function ProductDetail({ product }: { product: StoreProduct }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
       {/* ─── Gallery ─── */}
-      <div className="sticky top-24 space-y-3 self-start">
+      <div className="md:sticky md:top-24 space-y-3 md:self-start">
         <div className="aspect-[3/4] bg-linen overflow-hidden relative">
           {mainImage ? (
             <Image src={mainImage} alt={product.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" priority />

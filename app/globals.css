@@ -58,3 +58,8 @@ h1, h2, h3, h4 {
   visibility: hidden;
   pointer-events: none;
 }
+/* ── Craft page star twinkle ── */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.9; }
+}

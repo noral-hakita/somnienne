@@ -1,10 +1,12 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function AccountButton() {
+  const pathname = usePathname()
+  const dark = pathname.startsWith('/craft')
   const [email, setEmail] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
@@ -24,7 +26,12 @@ export default function AccountButton() {
 
   if (!email) {
     return (
-      <Link href="/login" className="text-xs uppercase tracking-[0.25em] text-espresso/70 hover:text-bronze transition-colors">
+      <Link
+        href="/login"
+        className={`text-xs uppercase tracking-[0.25em] transition-colors ${
+          dark ? 'text-ivory/70 hover:text-bronze' : 'text-espresso/70 hover:text-bronze'
+        }`}
+      >
         Sign in
       </Link>
     )
@@ -34,7 +41,9 @@ export default function AccountButton() {
     <Link
       href="/account"
       title="Your account"
-      className="w-8 h-8 rounded-full bg-espresso text-ivory text-xs uppercase flex items-center justify-center hover:bg-bronze transition-colors"
+      className={`w-8 h-8 rounded-full text-xs uppercase flex items-center justify-center transition-colors ${
+        dark ? 'bg-ivory text-espresso hover:bg-bronze hover:text-ivory' : 'bg-espresso text-ivory hover:bg-bronze'
+      }`}
     >
       {email[0]}
     </Link>
