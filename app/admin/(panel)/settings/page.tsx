@@ -14,7 +14,9 @@ const FIELDS = [
 export default function SettingsPage() {
   const [values, setValues] = useState<Record<string, string>>({})
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([])
   const [showcaseId, setShowcaseId] = useState('')
+  const [craftId, setCraftId] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -23,9 +25,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     (async () => {
-      const [s, c] = await Promise.all([
+      const [s, c, p] = await Promise.all([
         supabase.from('settings').select('key, value'),
         supabase.from('categories').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('products').select('id, name').eq('is_active', true).order('name'),
       ])
       const map: Record<string, string> = {}
       ;(s.data ?? []).forEach((row: { key: string; value: unknown }) => {
@@ -33,7 +36,9 @@ export default function SettingsPage() {
       })
       setValues(map)
       setShowcaseId(map['showcase_category_id'] ?? '')
+      setCraftId(map['craft_product_id'] ?? '')
       setCategories((c.data ?? []) as { id: string; name: string }[])
+      setProducts((p.data ?? []) as { id: string; name: string }[])
       setLoading(false)
     })()
   }, [])
@@ -55,6 +60,13 @@ export default function SettingsPage() {
   const saveShowcase = async () => {
     setSaving(true)
     await supabase.from('settings').upsert({ key: 'showcase_category_id', value: showcaseId })
+    setSaving(false)
+    flash()
+  }
+
+  const saveCraft = async () => {
+    setSaving(true)
+    await supabase.from('settings').upsert({ key: 'craft_product_id', value: craftId })
     setSaving(false)
     flash()
   }
@@ -98,18 +110,14 @@ export default function SettingsPage() {
 
           <div className="bg-ivory border border-sand p-6 space-y-4">
             <div>
-              <label className="block text-[10px] uppercase tracking-[0.25em] text-taupe mb-2">
-                Home showcase category
-              </label>
+              <label className="block text-[10px] uppercase tracking-[0.25em] text-taupe mb-2">Home showcase category</label>
               <select value={showcaseId} onChange={(e) => setShowcaseId(e.target.value)} className={inputCls}>
                 <option value="">— No showcase —</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
-              <p className="text-taupe text-xs mt-1 italic">
-                The 3D scroll stage on the landing page features this category's active products.
-              </p>
+              <p className="text-taupe text-xs mt-1 italic">The 3D scroll stage on the landing page features this category's active products.</p>
             </div>
             <button
               onClick={saveShowcase}
@@ -117,6 +125,26 @@ export default function SettingsPage() {
               className="w-full bg-espresso text-ivory py-4 text-xs uppercase tracking-[0.25em] hover:bg-bronze transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" /> {saved ? 'Saved ✓' : 'Save showcase'}
+            </button>
+          </div>
+
+          <div className="bg-ivory border border-sand p-6 space-y-4">
+            <div>
+              <label className="block text-[10px] uppercase tracking-[0.25em] text-taupe mb-2">Craft page spotlight</label>
+              <select value={craftId} onChange={(e) => setCraftId(e.target.value)} className={inputCls}>
+                <option value="">— No spotlight —</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <p className="text-taupe text-xs mt-1 italic">The /craft scroll experience unveils this product's photograph.</p>
+            </div>
+            <button
+              onClick={saveCraft}
+              disabled={saving}
+              className="w-full bg-espresso text-ivory py-4 text-xs uppercase tracking-[0.25em] hover:bg-bronze transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Save className="w-4 h-4" /> {saved ? 'Saved ✓' : 'Save spotlight'}
             </button>
           </div>
         </>

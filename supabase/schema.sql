@@ -752,3 +752,24 @@ $$;
 create policy settings_staff_ins on public.settings
 for insert to authenticated
 with check (public.is_staff());
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v1.9 · craft page spotlight reader
+-- ================================================================
+create or replace function public.get_craft_product() returns jsonb
+language sql stable security definer set search_path = public as $$
+select (
+  select jsonb_build_object(
+    'id', p.id,
+    'name', p.name,
+    'price', p.retail_price,
+    'image', coalesce(
+      (select m.url from public.product_media m where m.product_id = p.id order by m.position asc limit 1),
+      (select v.image_url from public.product_variants v where v.product_id = p.id limit 1)
+    )
+  )
+  from public.products p
+  where p.is_active
+    and p.id = ((select value #>> '{}' from public.settings where key = 'craft_product_id'))::uuid
+);
+$$;
