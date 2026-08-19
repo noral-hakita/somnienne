@@ -22,7 +22,7 @@ export default function Showcase({ products, categoryName }: { products: StorePr
 
   const tilt = useTransform(exact, (v) => {
     const frac = v - Math.floor(v)
-    return (frac - 0.5) * 28
+    return (frac - 0.5) * 24
   })
 
   const product = products[active]
@@ -36,14 +36,14 @@ export default function Showcase({ products, categoryName }: { products: StorePr
           style={{ backgroundColor: CARD_TINTS[active % CARD_TINTS.length] }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 md:min-h-[520px]">
-            {/* ─── Tilting image — framed plate on top for mobile ─── */}
-            <div className="relative order-1 md:order-2 h-48 md:h-auto flex items-center justify-center md:p-14" style={{ perspective: 1000 }}>
+            {/* ─── Imagery: full-bleed banner on mobile, framed tilting plate on desktop ─── */}
+            <div className="relative h-56 sm:h-72 md:h-auto overflow-hidden flex items-center justify-center md:p-14" style={{ perspective: 1000 }}>
               <motion.div
                 style={{ rotateY: tilt }}
-                className="relative aspect-[3/4] h-full md:h-auto md:w-full md:max-w-sm overflow-hidden bg-linen shadow-2xl shadow-espresso/10"
+                className="relative w-full h-full md:h-auto md:w-full md:max-w-sm md:aspect-[3/4] bg-linen overflow-hidden shadow-2xl shadow-espresso/10"
               >
                 {product.images[0] ? (
-                  <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="(max-width: 768px) 80vw, 384px" />
+                  <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 384px" />
                 ) : (
                   <div className={`w-full h-full bg-gradient-to-br ${product.imageGradient}`} />
                 )}
@@ -51,14 +51,14 @@ export default function Showcase({ products, categoryName }: { products: StorePr
             </div>
 
             {/* ─── Story side ─── */}
-            <div className="order-2 md:order-1 p-6 md:p-14 flex flex-col justify-center">
+            <div className="p-6 md:p-14 flex flex-col justify-center">
               <p className="text-bronze text-[9px] md:text-[10px] uppercase tracking-[0.4em] mb-2 md:mb-4">{categoryName}</p>
               <motion.h2
                 key={product.id}
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="font-serif text-3xl md:text-5xl font-light text-espresso leading-tight mb-3 md:mb-4"
+                className="font-serif text-3xl sm:text-4xl md:text-5xl font-light text-espresso leading-tight mb-3 md:mb-4"
               >
                 {product.name}
               </motion.h2>
@@ -67,7 +67,7 @@ export default function Showcase({ products, categoryName }: { products: StorePr
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-taupe text-sm md:text-base leading-relaxed mb-4 md:mb-6 line-clamp-3 md:line-clamp-none"
+                className="text-taupe text-sm md:text-base leading-relaxed mb-4 md:mb-6 line-clamp-2 md:line-clamp-none"
               >
                 {product.shortDescription}
               </motion.p>

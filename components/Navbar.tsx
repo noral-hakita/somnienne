@@ -1,4 +1,5 @@
 'use client'
+
 import Link from 'next/link'
 import { useWardrobeStore } from '@/store/wardrobeStore'
 import { useState, useEffect } from 'react'
@@ -38,7 +39,7 @@ export default function Navbar() {
         </Link>
         <ul className="hidden md:flex items-center gap-10 list-none">
           <li><Link href="/collection" className={linkCls}>Collection</Link></li>
-          <li><Link href="/craft" className={linkCls}>The Craft</Link></li>
+          <li><Link href="/craft" className={linkCls}>Spotlight</Link></li>
           <li><Link href="/story" className={linkCls}>Our Story</Link></li>
         </ul>
         <div className="flex items-center gap-6">

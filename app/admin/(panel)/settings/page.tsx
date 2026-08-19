@@ -16,7 +16,8 @@ export default function SettingsPage() {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
   const [products, setProducts] = useState<{ id: string; name: string }[]>([])
   const [showcaseId, setShowcaseId] = useState('')
-  const [craftId, setCraftId] = useState('')
+  const [spotlightId, setSpotlightId] = useState('')
+  const [spotlightEnds, setSpotlightEnds] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -36,7 +37,8 @@ export default function SettingsPage() {
       })
       setValues(map)
       setShowcaseId(map['showcase_category_id'] ?? '')
-      setCraftId(map['craft_product_id'] ?? '')
+      setSpotlightId(map['craft_product_id'] ?? '')
+      setSpotlightEnds(map['spotlight_ends_at'] ?? '')
       setCategories((c.data ?? []) as { id: string; name: string }[])
       setProducts((p.data ?? []) as { id: string; name: string }[])
       setLoading(false)
@@ -64,9 +66,12 @@ export default function SettingsPage() {
     flash()
   }
 
-  const saveCraft = async () => {
+  const saveSpotlight = async () => {
     setSaving(true)
-    await supabase.from('settings').upsert({ key: 'craft_product_id', value: craftId })
+    await supabase.from('settings').upsert([
+      { key: 'craft_product_id', value: spotlightId },
+      { key: 'spotlight_ends_at', value: spotlightEnds },
+    ])
     setSaving(false)
     flash()
   }
@@ -128,21 +133,33 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          <div className="bg-ivory border border-sand p-6 space-y-4">
+          <div className="bg-espresso border border-espresso p-6 space-y-4">
+            <p className="text-bronze text-[10px] uppercase tracking-[0.3em]">Spotlight · /craft</p>
             <div>
-              <label className="block text-[10px] uppercase tracking-[0.25em] text-taupe mb-2">Craft page spotlight</label>
-              <select value={craftId} onChange={(e) => setCraftId(e.target.value)} className={inputCls}>
+              <label className="block text-[10px] uppercase tracking-[0.25em] text-ivory/60 mb-2">Spotlight product</label>
+              <select value={spotlightId} onChange={(e) => setSpotlightId(e.target.value)} className={inputCls}>
                 <option value="">— No spotlight —</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-              <p className="text-taupe text-xs mt-1 italic">The /craft scroll experience unveils this product's photograph.</p>
             </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-[0.25em] text-ivory/60 mb-2">Discount ends at</label>
+              <input
+                type="datetime-local"
+                value={spotlightEnds}
+                onChange={(e) => setSpotlightEnds(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+            <p className="text-ivory/40 text-xs italic">
+              Set a Sale price on the product — that becomes the spotlight price with the retail struck through.
+            </p>
             <button
-              onClick={saveCraft}
+              onClick={saveSpotlight}
               disabled={saving}
-              className="w-full bg-espresso text-ivory py-4 text-xs uppercase tracking-[0.25em] hover:bg-bronze transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-bronze text-espresso py-4 text-xs uppercase tracking-[0.25em] font-medium hover:bg-ivory transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" /> {saved ? 'Saved ✓' : 'Save spotlight'}
             </button>

@@ -773,3 +773,26 @@ select (
     and p.id = ((select value #>> '{}' from public.settings where key = 'craft_product_id'))::uuid
 );
 $$;
+
+-- ================================================================
+-- SOMNIENNE · SCHEMA ADDENDUM v2.0 · spotlight reader
+-- ================================================================
+create or replace function public.get_spotlight() returns jsonb
+language sql stable security definer set search_path = public as $$
+select (
+  select jsonb_build_object(
+    'id', p.id,
+    'name', p.name,
+    'retail', p.retail_price,
+    'sale', p.sale_price,
+    'images', coalesce((
+      select jsonb_agg(m.url order by m.position asc)
+      from public.product_media m where m.product_id = p.id
+    ), '[]'::jsonb),
+    'ends_at', (select value #>> '{}' from public.settings where key = 'spotlight_ends_at')
+  )
+  from public.products p
+  where p.is_active
+    and p.id = ((select value #>> '{}' from public.settings where key = 'craft_product_id'))::uuid
+);
+$$;
